@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	layout="vertical" 
+	width="400" 
+	height="125"
+	showCloseButton="false"
+	title="Export Options"
+	resizeEffect="{Resize}"
+	verticalScrollPolicy="off">
+	
+	<mx:Script>
+		<![CDATA[
+			
+			//============================
+			// Imports
+			//============================
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.HorizontalList;
+			import mx.controls.Image;
+			import mx.effects.Resize;
+			import mx.events.ItemClickEvent;
+			import mx.graphics.codec.JPEGEncoder;
+			import mx.graphics.codec.PNGEncoder;
+			import mx.managers.PopUpManager;
+			
+			import stripper.display.ImageLoader;
+			
+			//============================
+			// Constants
+			//============================
+			
+			private const JPEG:String = "jpg";
+			private const PNG:String = "png";
+			
+			private const MAX_BMP_WIDTH:int = 8191;
+			
+			//============================
+			// Vars
+			//============================
+			
+			private var _imageType:String = PNG;
+			private var _bd:BitmapData;
+			private var _numLoaded:int;
+			private var _numImages:int;
+			private var _bytes:ByteArray;
+			
+			public var images:ArrayCollection;
+			public var w:int;
+			public var h:int;
+			public var prependEmpty:Boolean;
+			
+			//============================
+			// Properties
+			//============================
+			
+			//============================
+			// Private Methods
+			//============================
+			
+			/**
+			 * Finish up saving the strip.
+			 */
+			private function _finish():void
+			{
+				switch (_imageType)
+				{
+					case PNG:
+						var png:PNGEncoder = new PNGEncoder();
+						_bytes = png.encode(_bd);
+						break;
+					
+					case JPEG:
+						var jpeg:JPEGEncoder = new JPEGEncoder(jpgQuality.value);
+						_bytes = jpeg.encode(_bd);
+						break;
+				}
+				
+				
+				var so:SharedObject = SharedObject.getLocal("LastSaveDir");
+				var f:File;
+				if (so != null && so.data.lastDir != null)
+				{
+					f = new File(so.data.lastDir).resolvePath("strip." + _imageType);
+				}
+				else
+				{
+					f = File.documentsDirectory.resolvePath("strip." + _imageType);
+				}
+				
+				f.browseForSave("Save Strip");
+				f.addEventListener(Event.SELECT, _onSaveSelect);
+				f.addEventListener(Event.CANCEL, _onSaveCancel);
+			}
+			
+			//============================
+			// Event Handlers
+			//============================
+			
+			/**
+			 * Do the actual saving.
+			 * 
+			 * @param e Event
+			 */
+			private function _onSaveSelect(e:Event):void
+			{
+				e.currentTarget.removeEventListener(Event.SELECT, _onSaveSelect);
+				e.currentTarget.removeEventListener(Event.CANCEL, _onSaveCancel);
+				var f:File = e.currentTarget as File;
+				
+				if (f.extension != _imageType)
+				{
+					f.url += "." + _imageType;
+				}
+				var fs:FileStream = new FileStream();
+				fs.open(f, FileMode.WRITE);
+				fs.writeBytes(_bytes);
+				fs.close();
+				
+				var so:SharedObject = SharedObject.getLocal("LastSaveDir");
+				so.data.lastDir = f.parent.url;
+				so.flush();
+				
+				f = null;
+				_bd.dispose();
+				_bd = null;
+				PopUpManager.removePopUp(this);
+			}
+			
+			/**
+			 * Cancel browseForSave.
+			 * 
+			 * @param e Event
+			 */
+			private function _onSaveCancel(e:Event):void
+			{
+				e.currentTarget.removeEventListener(Event.SELECT, _onSaveSelect);
+				e.currentTarget.removeEventListener(Event.CANCEL, _onSaveCancel);
+				exportBtn.enabled = cancelBtn.enabled = jpgQuality.enabled = true;
+			}
+			
+			/**
+			 * Cancel the export.
+			 * 
+			 * @param e MouseEvent
+			 */
+			private function _onCancelClick(e:MouseEvent):void
+			{
+				if (_bd != null)
+				{
+					_bd.dispose();
+					_bd = null;
+				}
+				
+				PopUpManager.removePopUp(this);
+			}
+			
+			/**
+			 * Select the export format.
+			 * 
+			 * @param e ItemClickEvent
+			 */
+			private function _onImageSelect(e:ItemClickEvent):void
+			{
+				trace("[ExportWindow] Image Select");
+				_imageType = (e.relatedObject as RadioButton).value.toString();
+				if (_imageType == JPEG)
+				{
+					jpgBox.visible = jpgBox.enabled = jpgBox.includeInLayout = true;
+//					height = 250;
+					height += 125;
+				}
+				else
+				{
+					jpgBox.visible = jpgBox.enabled = jpgBox.includeInLayout = false;
+//					height = 145;
+					height -= 125;
+				}
+			}
+			
+			/**
+			 * Start the export process.
+			 * 
+			 * @param e MouseEvent
+			 */
+			private function _onExportClick(e:MouseEvent):void
+			{
+				exportBtn.enabled = cancelBtn.enabled = jpgQuality.enabled = false;
+				_numImages = images.length;
+				if (prependEmpty) _numImages += 1;
+				
+				var outputWidth:Number = w * _numImages;
+				if (outputWidth > MAX_BMP_WIDTH)
+				{
+					var m:String = "Yikes!  It looks like you have too many images. "
+								 + "The widest image Stripper can create is " + MAX_BMP_WIDTH.toString() + " pixels wide. "
+								 + "Your image is " + outputWidth.toString() + " pixels wide. "
+								 + "You need to remove about " + Math.ceil((outputWidth - MAX_BMP_WIDTH) / w) + " images to fit.";
+					errMsg.text = m;
+					errMsgBox.visible = errMsgBox.includeInLayout = true;
+					exportBtn.enabled = cancelBtn.enabled = jpgQuality.enabled = true;
+					height += 100;
+					return;
+				}
+				
+				_bd = new BitmapData(w * _numImages, h, true);
+				_bd.fillRect(new Rectangle(0, 0, w * _numImages, h), 0x00ffffff);
+				_numLoaded = 0;
+				
+				if (prependEmpty)
+				{
+					// Set this back
+					_numImages -= 1;
+				}
+				
+				var f:File;
+				var bd:BitmapData;
+				var offset:int = (prependEmpty) ? 1 : 0;
+				for (var i:int = 0; i < _numImages; ++i)
+				{
+					//bd = (images[i].bmp as Bitmap).bitmapData;
+					bd = images[i].bmd as BitmapData;
+					//_bd.copyPixels(bd, bd.rect, new Point((images[i].index + offset) * w, 0), null, null, true);
+					_bd.copyPixels(bd, bd.rect, new Point((i + offset) * w, 0), null, null, true);
+				}
+				
+				_finish();
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:HBox
+		percentWidth="100"
+		paddingTop="10"
+		paddingRight="10"
+		paddingBottom="10"
+		paddingLeft="10"
+		includeInLayout="false"
+		visible="false"
+		id="errMsgBox">
+		
+		<mx:Text
+			percentWidth="100"
+			height="60"
+			id="errMsg"
+			color="#ff0000"/>
+		
+	</mx:HBox>
+	
+	<mx:HBox
+		percentWidth="100"
+		paddingTop="10"
+		paddingRight="10"
+		paddingBottom="10"
+		paddingLeft="10">
+		
+		<mx:Label
+			text="Export As:"/>
+		
+		<mx:RadioButtonGroup
+			id="imageType"
+			itemClick="_onImageSelect(event)"/>
+		
+		<mx:RadioButton
+			groupName="imageType"
+			id="png"
+			value="{PNG}"
+			label="PNG"
+			selected="true"/>
+		
+		<mx:RadioButton
+			groupName="imageType"
+			id="jpg"
+			value="{JPEG}"
+			label="JPG"/>
+		
+	</mx:HBox>
+	
+	<mx:VBox
+		id="jpgBox"
+		percentWidth="100"
+		paddingTop="10"
+		paddingRight="10"
+		paddingBottom="10"
+		paddingLeft="10"
+		visible="false"
+		enabled="false"
+		includeInLayout="false">
+		
+		<mx:Label
+			text="JPEG Quality"/>
+		
+		<mx:HBox
+			percentWidth="100"
+			horizontalGap="10">
+			
+			<mx:HSlider
+				id="jpgQuality"
+				percentWidth="100"
+				maximum="100"
+				minimum="10"
+				tickValues="{[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}"
+				snapInterval="10"
+				value="100"/>
+			
+			<mx:TextInput
+				text="{jpgQuality.value}"
+				editable="false"
+				textAlign="center"
+				width="50"/>
+			
+		</mx:HBox>
+		
+	</mx:VBox>
+	
+	<mx:Spacer
+		percentHeight="100"/>
+	
+	<mx:HBox
+		percentWidth="100"
+		horizontalAlign="right"
+		paddingRight="10"
+		paddingBottom="10">
+		
+		<mx:Button
+			label="Export"
+			id="exportBtn"
+			click="_onExportClick(event)"/>
+		
+		<mx:Button
+			label="Cancel"
+			id="cancelBtn"
+			click="_onCancelClick(event)"/>
+			
+	</mx:HBox>
+	
+</mx:TitleWindow>

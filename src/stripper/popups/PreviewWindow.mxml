@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	layout="vertical" 
+	width="400" 
+	height="350"
+	showCloseButton="true"
+	close="_onCloseClick(event)"
+	title="Preview Animation"
+	verticalScrollPolicy="off"
+	horizontalScrollPolicy="off"
+	creationComplete="_onCreationComplete(event)">
+	
+	<mx:Script>
+		<![CDATA[
+			//============================
+			// Imports
+			//============================
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.HorizontalList;
+			import mx.controls.Image;
+			import mx.events.FlexEvent;
+			import mx.events.ItemClickEvent;
+			import mx.graphics.codec.JPEGEncoder;
+			import mx.graphics.codec.PNGEncoder;
+			import mx.managers.PopUpManager;
+			
+			import stripper.display.ImageLoader;
+			import stripper.vo.ImageVO;
+			
+			//============================
+			// Constants
+			//============================
+			
+			private const JPEG:String = "jpg";
+			private const PNG:String = "png";
+			
+			//============================
+			// Vars
+			//============================
+			
+			private var _timer:Timer;
+			private var _images:ArrayCollection;
+			private var _frame:int;
+			
+			[Bindable] private var _isPlaying:Boolean;
+			[Bindable] public var w:int;
+			[Bindable] public var h:int;
+			
+			//============================
+			// Properties
+			//============================
+			
+			public function set images(value:ArrayCollection):void
+			{
+				_images = value;
+				preview.source = new Bitmap((_images[0] as ImageVO).bmd);
+			}
+			
+			public function get images():ArrayCollection
+			{
+				return _images;
+			}
+			
+			//============================
+			// Private Methods
+			//============================
+		
+			//============================
+			// Event Handlers
+			//============================
+			
+			private function _onCreationComplete(e:FlexEvent):void
+			{
+				_isPlaying = false;
+				_frame = 0;
+			}
+			
+			/**
+			 * Close the preview.
+			 * 
+			 * @param e Event
+			 */
+			private function _onCloseClick(e:Event):void
+			{
+				if (_timer != null)
+				{
+					_timer.stop();
+					_timer.removeEventListener(TimerEvent.TIMER, _onTimer);
+				}
+				PopUpManager.removePopUp(this);
+			}
+			
+			private function _onPlayClick(e:Event):void
+			{
+				if (_isPlaying)
+				{
+					_timer.stop();
+					_isPlaying = false;
+				}
+				else
+				{
+					if (_timer != null)
+					{
+						_timer.removeEventListener(TimerEvent.TIMER, _onTimer);
+					}
+					_timer = new Timer((1 / framerate.value) * 1000);
+					_timer.addEventListener(TimerEvent.TIMER, _onTimer);
+					_timer.start();
+					_isPlaying = true;
+				}
+			}
+			
+			private function _onStopClick(e:Event):void
+			{
+				_timer.stop();
+				_timer.reset();
+				_isPlaying = false;
+				_frame = 0;
+				
+				var bmp:Bitmap = new Bitmap(_images[_frame].bmd);
+				
+				preview.source = bmp;
+			}
+			
+			private function _onTimer(e:TimerEvent):void
+			{
+				//var bmp:Bitmap = new Bitmap(_images[_frame].bmp.bitmapData);
+				var bmp:Bitmap = new Bitmap(_images[_frame].bmd);
+				
+				preview.source = bmp;
+				
+				_frame++;
+				
+				if (_frame >= _images.length)
+				{
+					_frame = 0;
+				}
+			}
+			
+		]]>
+	</mx:Script>
+	
+	<mx:HBox
+		percentWidth="100"
+		paddingTop="10"
+		paddingRight="10"
+		paddingBottom="10"
+		paddingLeft="10">
+		
+		<mx:Image
+			id="preview"
+			width="{w * zoom.value}"
+			height="{h * zoom.value}"
+			smoothBitmapContent="false"/>
+		
+		<mx:Spacer
+			percentWidth="100"/>
+		
+		<mx:VBox>
+			
+			<mx:Label
+				text="Framerate"/>
+			
+			<mx:NumericStepper
+				id="framerate"
+				minimum="1"
+				maximum="90"
+				value="30"
+				enabled="{!_isPlaying}"/>
+			
+			<mx:Label
+				text="Zoom"/>
+			
+			<mx:HSlider
+				id="zoom"
+				minimum="1"
+				maximum="10"
+				value="1"
+				percentWidth="100"
+				enabled="{!_isPlaying}"/>
+			
+		</mx:VBox>
+			
+			
+	</mx:HBox>
+	
+	<mx:Spacer
+		percentHeight="100"/>
+	
+	<mx:HBox
+		percentWidth="100"
+		paddingTop="10"
+		paddingRight="10"
+		paddingBottom="10"
+		paddingLeft="10">
+		
+		<mx:Button
+			id="playBtn"
+			label="{ (!_isPlaying) ? 'Play' : 'Pause' }"
+			click="_onPlayClick(event)"/>
+		
+		<mx:Button
+			id="stopBtn"
+			label="Stop"
+			click="_onStopClick(event)"
+			enabled="{_isPlaying}"/>
+		
+	</mx:HBox>
+	
+</mx:TitleWindow>

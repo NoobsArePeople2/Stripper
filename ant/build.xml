@@ -1,0 +1,378 @@
+<!--
+	#################################
+	 
+	Ant Tasks Build Script for Stripper 
+	#################################
+-->
+
+<project
+	name="Ant Tasks Build Script for Stripper"
+	default="Release Build">
+	
+	<!-- Change this to point to your build properties file -->
+	<property
+		file="build.properties"/>
+	
+	<!-- Initializes the builder -->
+	<target
+		name="-init"
+		depends="-clean">
+	
+		<echo
+			message="Creating directories..."/>
+		
+		<mkdir dir="${BUILD_DIR}"/>
+		
+		<mkdir dir="${RELEASE_DIR}"/>
+		
+	</target>
+	
+	<!-- Cleans up the old stuff -->
+	<target
+		name="-clean">
+	
+		<echo
+			message="Cleaning directories..."/>
+		
+		<delete	dir="${BUILD_DIR}"/>
+		
+	</target>
+	
+	<!-- Initializes the debug build -->
+	<target
+		name="-init debug"
+		depends="-clean debug">
+	
+		<echo
+			message="Creating debug directories..."/>
+	
+		<mkdir
+			dir="${DEBUG_DIR}"/>
+		
+	</target>
+	
+	<!-- Cleans up the debug folder -->
+	<target
+		name="-clean debug">
+	
+		<echo
+			message="Cleaning debug directory..."/>
+		
+		<delete dir="${DEBUG_DIR}"/>
+		
+	</target>
+	
+	<!-- Copys the necessary files to the build directory for compilation -->
+	<target
+		name="-copy to build"
+		depends="-init">
+	
+		<echo
+			message="Creating files for compilation..."/>
+		
+		<copy 
+			todir="${BUILD_DIR}/assets">
+			
+			<fileset dir="${ASSETS}"/>
+			
+		</copy>
+				
+		<copy
+			todir="${BUILD_DIR}">
+			<fileset dir="${SRC_DIR}"/>
+			
+		</copy>
+		
+		<copy
+			tofile="${BUILD_DIR}/${APP_NAME}.mxml"
+			file="${SRC_DIR}/${APP_NAME}.mxml"/>
+		
+	</target>
+	
+	<!-- Copies everything needed for standard release build (no baked in assets) -->
+	<target
+		name="-copy to release">
+	
+		<echo
+			message="Copying assets to release folder..."/>
+		
+		<copy 
+			todir="${RELEASE_DIR}/assets">
+			
+			<fileset dir="${ASSETS}"/>
+			
+		</copy>
+		
+	</target>
+	
+	<!-- Packages everything up into an AIR file -->
+	<target
+		name="-package to air">
+	
+		<echo
+			message="Packaging AIR application..."/>
+				
+		<java
+			jar="${ADT.JAR}"
+			fork="true"
+			failonerror="true">
+		
+			<arg value="-package"/>
+			<arg value="-storetype"/>
+			<arg value="${STORETYPE}"/>
+			<arg value="-keystore"/>
+			<arg value="${KEYSTORE}"/>
+			<arg value="-keypass"/>
+			<arg value="${STOREPASS}"/>
+			<arg value="-storepass"/>
+			<arg value="${STOREPASS}"/>
+					
+			<arg value="${LOCATION}/${APP_NAME}_${RELEASE_NAME}_${VERSION}.air"/>
+			<arg value="${BUILD_DIR}/temp-app.xml"/>
+			
+			<!-- Copy the main SWF -->
+			<arg value="-C"/>
+			<arg value="${BUILD_DIR}"/>
+			<arg value="${APP_NAME}.swf"/>
+			
+			<!-- Copy the assets -->
+			<arg value="-C"/>
+			<arg value="${RELEASE_DIR}"/>
+			<arg value="assets"/>
+			
+		</java>
+		
+	</target>
+	
+	<!-- Creates the application descriptor file for a release build. -->
+	<target
+		name="-release descriptor">
+		
+		<echo
+			message="Creating temporary application descriptor..."/>
+		
+		<copy 
+			tofile="${BUILD_DIR}/temp-app.xml" 
+			file="${APP_DESCRIPTOR}"/>
+		
+		<echo
+			message="Updating temporary application descriptor..."/>
+		
+		<replace
+			file="${BUILD_DIR}/temp-app.xml"
+			token="@app_root_content@"
+			value="${APP_NAME}.swf"/>
+		
+		<!-- Number used to differentiate internal and nightly builds.  Blank for releases. -->
+		<echo
+			message="Writing build number..."/>
+		
+		<replace
+			file="${BUILD_DIR}/temp-app.xml"
+			token="@build_number@"
+			value=""/>
+		
+		<replace
+			file="${BUILD_DIR}/temp-app.xml"
+			token="@version@"
+			value="${VERSION}"/>
+		
+		<!-- Name used to differentiate internal and nightly builds.  
+		     Allows for internals and nightlies to be installed as different applications.
+		     Blank for releases. -->
+		<echo
+			message="Writing build name..."/>
+						
+		<replace
+			file="${BUILD_DIR}/temp-app.xml"
+			token="@build_name@"
+			value=""/>
+		
+	</target>
+	
+	<!-- Creates the application descriptor file for a nightly build. -->
+	<target
+		name="-nightly descriptor">
+		
+		<echo
+			message="Creating temporary application descriptor..."/>
+		
+		<copy 
+			tofile="${BUILD_DIR}/temp-app.xml" 
+			file="${APP_DESCRIPTOR}"/>
+		
+		<echo
+			message="Updating temporary application descriptor..."/>
+		
+		<replace
+			file="${BUILD_DIR}/temp-app.xml"
+			token="@app_root_file@"
+			value="${APP_NAME}.swf"/>
+		
+		<echo
+			message="Writing build number..."/>
+		
+		<tstamp>
+			
+			<format
+				property="BUILD_TIME"
+				pattern="yyyyMMdd"/>
+				
+		</tstamp>
+		
+		<replace
+			file="${BUILD_DIR}/temp-app.xml"
+			token="@build_number@"
+			value=".${BUILD_TIME}"/>
+		
+		<echo
+			message="Writing build name..."/>
+		
+		<replace
+			file="${BUILD_DIR}/temp-app.xml"
+			token="@build_name@"
+			value="Nightly"/>
+		
+	</target>
+	
+	<!-- Compiles using MXMLC -->
+	<target
+		name="-mxmlc">
+	
+		<exec
+			executable="${MXMLC}"
+			failonerror="true">
+			
+			<arg value="-load-config=${RELEASE_CONFIG}"/>
+			<arg value="-debug=${DEBUG_BUILD}"/>
+			<arg value="-file-specs=${MAIN_SOURCE_FILE}"/>
+			<arg value="-output=${BUILD_DIR}/${APP_NAME}.swf"/>
+			
+			<!-- Conditional Compilation Values -->
+			<arg value="${CONFIG_DEBUG}"/>
+			<arg value="${CONFIG_RELEASE}"/>
+			
+			<arg value="-library-path+=${SDK_HOME}/frameworks/libs"/>
+			<arg value="-library-path+=${SDK_HOME}/frameworks/libs/air"/>
+			<arg value="-target-player=10.0.0"/>
+			
+			<arg value="-include-libraries=${LIBS_DIR}/applicationupdater_ui.swc"/>
+			<arg value="-source-path=${APP_ROOT}/src"/>
+			
+			<!-- Dump the Config File.  This is useful for comparing the Ant config file with the one used by Flex Builder. -->
+			<!--<arg value="-dump-config=${RELEASE_DIR}/config-dump.xml"/>-->		
+		</exec>
+		
+		<echo
+			message="Copying compiled swf to release folder..."/>
+		
+		<copy 
+			tofile="${RELEASE_DIR}/${APP_NAME}.swf" 
+			file="${BUILD_DIR}/${APP_NAME}.swf"/>
+		
+	</target>
+	
+	<!-- Perform a Compile for a Release Build -->
+	<target
+		name="-release compile"
+		depends="-copy to build, -copy to release">
+		
+		<echo
+			message="Performing release compile..."/>
+		
+		<antcall
+			target="-mxmlc">
+		
+			<param
+				name="DEBUG_BUILD"
+				value="false"/>
+			
+			<param
+				name="CONFIG_DEBUG"
+				value="-define=CONFIG::debug,false"/>
+
+			<param
+				name="CONFIG_RELEASE"
+				value="-define=CONFIG::release,true"/>
+	
+		</antcall>
+		
+	</target>
+	
+	<!-- Perform a Compile for a Debug Build -->
+	<target
+		name="-debug compile"
+		depends="-copy to build, -copy to release">
+		
+		<echo
+			message="Performing debug compile..."/>
+		
+		<antcall
+			target="-mxmlc">
+			
+			<param
+				name="DEBUG_BUILD"
+				value="true"/>
+			
+			<param
+				name="CONFIG_DEBUG"
+				value="-define=CONFIG::debug,true"/>
+
+			<param
+				name="CONFIG_RELEASE"
+				value="-define=CONFIG::release,false"/>
+	
+		</antcall>
+		
+	</target>
+	
+	<!-- Release Build -->
+	<target 
+		name="Release Build"
+		description="Builds a full release version of the application."
+		depends="-release compile, -release descriptor">
+
+		<echo
+			message="### Creating Release Build ###"/>
+		
+		<antcall
+			target="-package to air">
+		
+			<param
+				name="RELEASE_NAME"
+				value="Release"/>
+			
+			<param
+				name="BUILD_TIME"
+				value=""/>
+			
+			<param
+				name="LOCATION"
+				value="${RELEASE_DIR}"/>
+			
+		</antcall>
+		
+		<echo
+			message="Deleting temporary application descriptor..."/>
+		
+		<delete 
+			file="${BUILD_DIR}/temp-app.xml"/>
+		
+		<echo
+			message="Deleting build assets..."/>
+		
+		<delete
+			dir="${RELEASE_DIR}/assets"/>
+		
+		<echo
+			message="Deleting build SWF..."/>
+		
+		<delete
+			file="${RELEASE_DIR}/${APP_NAME}.swf"/>
+		
+		<delete
+			dir="${BUILD_DIR}"/>
+		
+	</target>
+	
+</project>

@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:WindowedApplication 
+	xmlns:mx="http://www.adobe.com/2006/mxml"
+	xmlns:controls="stripper.controls.*"
+	layout="vertical"
+	showStatusBar="false"
+	paddingLeft="0"
+	paddingRight="0"
+	paddingTop="0"
+	paddingBottom="0"
+	creationComplete="_onCreationComplete(event)">
+	
+	<mx:Style
+		source="style/style.css"/>
+	
+	<mx:Script>
+		<![CDATA[
+			
+			//============================
+			// Imports
+			//============================
+			
+			import air.update.ApplicationUpdaterUI;
+			import air.update.events.UpdateEvent;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Image;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			import stripper.display.ImageLoader;
+			import stripper.popups.ExportWindow;
+			import stripper.popups.PreviewWindow;
+			import stripper.vo.ImageVO;
+			
+			//============================
+			// Vars
+			//============================
+			
+			[Bindable]
+			private var _images:ArrayCollection;
+			
+			private var _files:ArrayCollection;
+			private var _numLoadedFiles:int;
+			private var _numImages:int;
+			
+			private var _appUpdater:ApplicationUpdaterUI;
+			
+			//============================
+			// Private, Protected Methods
+			//============================
+			
+			/**
+			 * Load selected files from disk.
+			 * 
+			 * @param files The files.
+			 */
+			private function _loadFiles(files:Array):void
+			{
+				var len:int = files.length;
+				_files = new ArrayCollection(files);
+				_numLoadedFiles = 0;
+				for (var i:int = 0; i < len; ++i)
+				{
+					var f:File = files[i] as File;
+					f.addEventListener(Event.COMPLETE, _onLoadComplete);
+					f.load();
+				}
+			}
+			
+			/**
+			 * Sorts the loaded items to ensure they are in the corrent order.
+			 * 
+			 * @param a First item to compare.
+			 * @param b Second item to compare.
+			 * @return comparison result.
+			 */
+			private function _sortOnIndex(a:ImageVO, b:ImageVO):Number
+			{
+				if (a.index > b.index)
+				{
+					return 1;
+				}
+				else if (a.index < b.index)
+				{
+					return -1;
+				}
+				
+				return 0;
+			}
+			
+			//============================
+			// Event Handlers
+			//============================
+			
+			/**
+			 * Loads a file from disk.
+			 * 
+			 * @param e Event
+			 */
+			private function _onLoadComplete(e:Event):void
+			{
+				trace("[Stripper] Load Complete");
+				e.currentTarget.removeEventListener(Event.COMPLETE, _onLoadComplete);
+				
+				var l:ImageLoader = new ImageLoader();
+				var f:File = e.currentTarget as File;
+				l.index = _files.getItemIndex(e.currentTarget) + _numImages;
+				l.loadBytes(f.data);
+				l.contentLoaderInfo.addEventListener(Event.COMPLETE, _onBytesComplete);
+			}
+			
+			/**
+			 * Called when a file's bytes have been loaded.
+			 * 
+			 * @param e Event
+			 */
+			private function _onBytesComplete(e:Event):void
+			{
+				e.currentTarget.removeEventListener(Event.COMPLETE, _onBytesComplete);
+				var il:ImageLoader = e.currentTarget.loader as ImageLoader;
+				var vo:ImageVO = new ImageVO();
+				vo.bmd = (e.currentTarget.content as Bitmap).bitmapData;
+				vo.index = il.index;
+				vo.file = _files.getItemAt(il.index - _numImages) as File;
+				
+				if (_images.length == 0)
+				{
+					stripCellWidth.value = vo.bmd.width;
+					stripCellHeight.value = vo.bmd.height;
+				}
+				
+				_images.addItem(vo);
+				_numLoadedFiles++;
+				
+				if (_numLoadedFiles >= _files.length)
+				{
+					_numLoadedFiles = 0;
+					_numImages = _images.length;
+					_files = null;
+					
+					// Put all the images in the correct order
+					// since they will load out of order (most likely). 
+					var arr:Array = _images.toArray();
+					arr.sort(_sortOnIndex);
+					_images = new ArrayCollection(arr);
+				}
+			}
+			
+			/**
+			 * Does some initialization stuff.
+			 * 
+			 * @param e FlexEvent
+			 */
+			private function _onCreationComplete(e:FlexEvent):void
+			{
+				// Check for updates
+				_appUpdater = new ApplicationUpdaterUI();
+				_appUpdater.updateURL = "http://www.warkittensoftware.net/stripper/get/update/update.xml";
+				_appUpdater.addEventListener(UpdateEvent.INITIALIZED, _onUpdate);
+				_appUpdater.addEventListener(ErrorEvent.ERROR, _onError);
+				_appUpdater.isCheckForUpdateVisible = false;
+				_appUpdater.initialize();
+				
+				_images = new ArrayCollection();
+				_numImages = 0;
+				addEventListener(MouseEvent.RIGHT_CLICK, _onMouseDown);
+			}
+			
+			/**
+			 * Handles updating.
+			 * 
+			 * @param e UpdateEvent
+			 */
+			private function _onUpdate(e:UpdateEvent):void
+			{
+				_appUpdater.checkNow();
+			}
+			
+			/**
+			 * Handles errors with updating.
+			 * 
+			 * @param e ErrorEvent
+			 */
+			private function _onError(e:ErrorEvent):void
+			{
+				trace("[Stripper] There was an error updating.");
+			}
+			
+			/**
+			 * Clears any selections in the image strip when the user right clicks.
+			 * 
+			 * @param e MouseEvent
+			 */
+			private function _onMouseDown(e:MouseEvent):void
+			{
+				imageStrip.selectedIndex = -1;
+			}
+			
+			/**
+			 * Called when the add button is clicked.
+			 * 
+			 * @param e The MouseEvent
+			 */
+			private function _onAddClick(e:MouseEvent):void
+			{
+				trace("[Stripper] Add Click");
+				
+				var so:SharedObject = SharedObject.getLocal("LastDir");
+				var f:File;
+				if (so != null && so.data.lastDir != null)
+				{
+					f = new File(so.data.lastDir);
+				}
+				else
+				{
+					f = File.documentsDirectory;
+				}
+				
+				f.browseForOpenMultiple("Select Files", [new FileFilter("Images (*.png,*.jpg,*.gif)", "*.png;*.gif;*.jpg;*.jpeg")]);
+				f.addEventListener(FileListEvent.SELECT_MULTIPLE, _onSelectFiles);
+				f.addEventListener(Event.CANCEL, _onSelectCancel);
+			}
+			
+			/**
+			 * Reverses the order of the images in the strip.
+			 * 
+			 * @param e MouseEvent
+			 */
+			private function _onReverseClick(e:MouseEvent):void
+			{
+				var arr:Array = _images.toArray();
+				_images = new ArrayCollection(arr.reverse());
+			}
+			
+			
+			/**
+			 * Removes selected images from the image strip.
+			 * 
+			 * @param e MouseEvent
+			 */
+			private function _onRemoveClick(e:MouseEvent):void
+			{
+				trace("[Sripper] Remove Click");
+				
+				var i:int;
+				
+				for (i = imageStrip.selectedItems.length - 1; i > -1; --i)
+				{
+					_images.removeItemAt(_images.getItemIndex(imageStrip.selectedItems[i]));
+				}
+				
+				var len:int = _numImages = _images.length;
+				for (i = 0; i < len; ++i)
+				{
+					(_images.getItemAt(i) as ImageVO).index = i;
+				}
+			}
+			
+			/**
+			 * Exports the strip.
+			 * 
+			 * @param e MouseEvent.
+			 */
+			private function _onExportClick(e:MouseEvent):void
+			{
+				var pop:ExportWindow = PopUpManager.createPopUp(this, ExportWindow, true) as ExportWindow;
+				pop.images = _images;
+				pop.w = stripCellWidth.value;
+				pop.h = stripCellHeight.value;
+				pop.prependEmpty = addEmpty.selected;
+				PopUpManager.centerPopUp(pop);
+			}
+			
+			/**
+			 * Called when the user selects a bunch of files.
+			 * 
+			 * @param e FileListEvent.
+			 */
+			private function _onSelectFiles(e:FileListEvent):void
+			{
+				e.currentTarget.removeEventListener(FileListEvent.SELECT_MULTIPLE, _onSelectFiles);
+				e.currentTarget.removeEventListener(Event.CANCEL, _onSelectCancel);
+				
+				var len:int = e.files.length;
+				// Write out the last used directory so it can be retrieved later.
+				if (len > 0)
+				{
+					var f:File = e.files[0];
+					var so:SharedObject = SharedObject.getLocal("LastDir");
+					so.data.lastDir = f.url.substring(0, f.url.lastIndexOf("/"));;
+					so.flush();
+				}
+				
+				_loadFiles(e.files);
+			}
+			
+			/**
+			 * Called when the user cancels a selection.
+			 * 
+			 * @param e Event
+			 */
+			private function _onSelectCancel(e:Event):void
+			{
+				e.currentTarget.removeEventListener(FileListEvent.SELECT_MULTIPLE, _onSelectFiles);
+				e.currentTarget.removeEventListener(Event.CANCEL, _onSelectCancel);
+			}
+			
+			/**
+			 * Opens the preview window.
+			 * 
+			 * @param e MouseEvent
+			 */
+			private function _onPreviewClick(e:MouseEvent):void
+			{
+				var pop:PreviewWindow = PopUpManager.createPopUp(this, PreviewWindow, true) as PreviewWindow;
+				pop.images = _images;
+				pop.w = stripCellWidth.value;
+				pop.h = stripCellHeight.value;
+				PopUpManager.centerPopUp(pop);
+			}
+			
+		]]>
+	</mx:Script>
+	
+	<mx:HBox
+		percentWidth="100"
+		height="50"
+		paddingTop="5"
+		paddingLeft="5"
+		paddingBottom="5"
+		paddingRight="5">
+		
+		<mx:Image
+			source="/assets/stripper-logo-128x40.png"/>
+		
+		<mx:Spacer
+			width="32"/>
+		
+		<mx:HBox
+			percentWidth="100"
+			percentHeight="100"
+			verticalAlign="middle">
+			
+			<mx:Image
+				source="/assets/add.png"
+				toolTip="Add Images"
+				buttonMode="true"
+				click="_onAddClick(event)"/>
+			
+			<mx:Image
+				source="/assets/remove.png"
+				toolTip="{ (imageStrip.selectedItems.length > 1) ? 'Remove Images' : 'Remove Image' }"
+				buttonMode="true"
+				click="_onRemoveClick(event)"
+				enabled="{ (imageStrip.selectedItems.length > 0) ? true : false }"/>
+			
+			<mx:Image
+				source="/assets/reverse.png"
+				toolTip="Reverse Strip"
+				buttonMode="true"
+				click="_onReverseClick(event)"
+				enabled="{ (_images.length > 0) ? true : false }"/>
+			
+			<mx:Image
+				source="/assets/export.png"
+				toolTip="Export Strip"
+				buttonMode="true"
+				click="_onExportClick(event)"
+				enabled="{ (_images.length > 0) ? true : false }"/>
+			
+			<mx:VRule
+				percentHeight="60"/>
+			
+			<mx:Image
+				source="/assets/preview.png"
+				toolTip="Preview Animation"
+				buttonMode="true"
+				click="_onPreviewClick(event)"
+				enabled="{ (_images.length > 1) ? true : false }"/>
+			
+			<mx:VRule
+				percentHeight="60"/>
+			
+			<!--<mx:Label
+				text="Cell Dimensions:"/>-->
+			
+			<mx:NumericStepper
+				value="12"
+				id="stripCellWidth"
+				toolTip="Cell Width"
+				stepSize="1"
+				minimum="1"
+				maximum="2880"/>
+			
+			<mx:Label
+				text="x"/>
+			
+			<mx:NumericStepper
+				value="12"
+				id="stripCellHeight"
+				toolTip="Cell Height"
+				stepSize="1"
+				minimum="1"
+				maximum="2880"/>
+				
+			<mx:CheckBox
+				id="addEmpty"
+				label="Prepend Empty Cell"
+				selected="false"/>
+			
+		</mx:HBox>
+		
+	</mx:HBox>
+	
+	<mx:Spacer
+		percentHeight="100"/>
+	
+	<mx:HorizontalList
+		id="imageStrip"
+		percentWidth="100"
+		height="{stripCellHeight.value + 20}"
+		paddingTop="10"
+		paddingRight="10"
+		paddingBottom="10"
+		paddingLeft="10"
+		backgroundColor="#000000"
+		filters="{[new DropShadowFilter(0, 0, 0, 0.5, 15, 15)]}"
+		borderThickness="0"
+		dataProvider="{_images}"
+		itemRenderer="stripper.itemRenderers.ImageRenderer"
+		allowMultipleSelection="true"
+		dragEnabled="true"
+		dragMoveEnabled="true"
+		dropEnabled="true"/>
+	
+	<mx:Spacer
+		percentHeight="100"/>
+	
+	<mx:HBox
+		percentWidth="100"
+		height="50"
+		paddingTop="5"
+		paddingLeft="5"
+		paddingBottom="5"
+		paddingRight="5">
+		
+	</mx:HBox>
+	
+</mx:WindowedApplication>

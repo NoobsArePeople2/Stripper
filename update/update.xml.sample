@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<update xmlns="http://ns.adobe.com/air/framework/update/description/1.0">
+    <version>0.0.1</version>
+    <url>http://example.com/get/update/Stripper.air</url>
+    <description><![CDATA[
+    	v0.0.1
+    	Source released on github
+  ]]></description>
+</update>

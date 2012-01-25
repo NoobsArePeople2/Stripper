@@ -1,0 +1,12 @@
+.settings/
+bin-debug/
+bin-release/
+bin/
+builds/
+*.p12
+pass.txt
+update.xml
+build.properties
+.actionScriptProperties
+.flexProperties
+.project
