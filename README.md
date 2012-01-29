@@ -27,8 +27,12 @@ Originally developed for use with [Flixel](https://github.com/AdamAtomic/flixel)
 1.  Perform steps 1-3 under "How To Build for Debug".
 2.  In `build.properties` set a value for `STOREPASS`.
 3.  Open a command line prompt (cmd.exe on Windows, Terminal on Mac) and navigate to `<path/to/project>/ant`.
-4.  Type `ant cert` to generate a signing certificate in the `cert` folder.
+4.  Type `ant cert` to generate a signing certificate in the `cert` folder. *
 5.  Type `ant release` to build the release version and package it to a .air file for distribution.
+
+# * A Note About Signing Certificates
+
+Once you sign and build Stripper with a signing certificate you _must_ use the same certificate on subsequent releases. If the certificate changes for any reason you will have to [migrate certificates](http://help.adobe.com/en_US/air/build/WS901d38e593cd1bac1e63e3d128fc240122-7ffd.html).
 
 # Credits
 

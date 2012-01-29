@@ -1,6 +1,3 @@
-# Location of Flex SDK
-SDK_HOME=C:\\Program Files\ (x86)\\Adobe\\Flex\ Builder\ 3\\sdks\\3.5.0
-
 # Location of the Flex SDK
 FLEX_HOME=E:/Dev/Flex/3.6.0
 
@@ -22,90 +19,26 @@ ADT=${FLEX_HOME}/lib/adt.jar
 BIN_DIR=bin
 
 # Location of application manifests
-MANIFESTS_DIR=src
+MANIFESTS_DIR=manifests
 
 # Location of source files
 SOURCE_FOLDER=src
 
 # Project files
 MAIN_SOURCE_FILE=src/Stripper.mxml
-APP_DESCRIPTOR=Stripper-app.xml
+DEBUG_DESCRIPTOR=debug-app.xml
+RELEASE_DESCRIPTOR=release-app.xml
 ASSETS_DIR=src/assets
 
 # Certificate
 STORETYPE=pkcs12
 KEYSTORE=cert/cert.p12
-STOREPASS=replace with your password
+STOREPASS=Your Password Here
+ORG_UNIT=Your Organizational Unit
+ORG=Your Organization
 
 # Compiled SWF
 OUTPUT_SWF=Stripper.swf
 
 # AIR package
 OUTPUT_AIR=Stripper.air
-
-######
-
-# Version
-VERSION=0.4.1
-
-# ADT
-ADT.JAR=${SDK_HOME}/lib/adt.jar
-
-# MXMLC Binary
-MXMLC=${SDK_HOME}/bin/amxmlc.bat
-
-# Halo Theme
-HALO=${SDK_HOME}/frameworks/themes/Halo/halo.swc
-
-# Application Root
-APP_ROOT=../
-
-# Source directory
-SRC_DIR=${APP_ROOT}/src
-
-# Libraries directory
-LIBS_DIR=${APP_ROOT}/libs
-
-# Locales directory
-LOC_DIR=${APP_ROOT}/locale
-
-# Builds directory -- this is where all our building takes place
-BUILDS_DIR=builds
-
-# Build Directory -- intermediate builds go here
-BUILD_DIR=${APP_ROOT}/${BUILDS_DIR}/build
-
-# Debug Directory -- debug builds go here
-DEBUG_DIR=${APP_ROOT}/${BUILDS_DIR}/debug
-
-# Release directory -- release builds go here
-RELEASE_DIR=${APP_ROOT}/${BUILDS_DIR}/release
-
-LINE_SEPARATOR=\n
-
-# Release Application Name
-APP_NAME=Stripper
-
-# Application Descriptor
-APP_DESCRIPTOR=${SRC_DIR}/ant-app.xml
-
-# AIR Name (name of the exported air file)
-AIR_NAME=${APP_NAME}.air
-
-# Main Application Source File (in build dir)
-MAIN_SOURCE_FILE=${BUILD_DIR}/${APP_NAME}.mxml
-
-ASSETS=${SRC_DIR}/assets
-
-SETTINGS=${SRC_DIR}/settings
-
-# Release AIR Config XML
-RELEASE_CONFIG=../config/config-release.xml
-
-## -- Certificate Stuff -- ##
-
-STORETYPE=pkcs12
-
-KEYSTORE=${APP_ROOT}/cert/your-cert.p12
-
-STOREPASS=your-password

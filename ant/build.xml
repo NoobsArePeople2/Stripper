@@ -52,15 +52,8 @@
 
   <target
     name="debugc"
-    description="Compiles the build">
+    description="Compiles the debug build">
 
-  	<copy 
-  		todir="${BIN_DIR}/assets">
-  				
-  		<fileset dir="${ASSETS_DIR}"/>
-  				
-  	</copy>
-  	
     <antcall
       target="-amxmlc">
 
@@ -71,9 +64,14 @@
     </antcall>
 
     <copy
-      toFile="${BIN_DIR}/${APP_DESCRIPTOR}"
-      file="${MANIFESTS_DIR}/${APP_DESCRIPTOR}"/>
+      toFile="${BIN_DIR}/${DEBUG_DESCRIPTOR}"
+      file="${MANIFESTS_DIR}/${DEBUG_DESCRIPTOR}"/>
   
+    <copy 
+        todir="${BIN_DIR}/assets">
+        <fileset dir="${ASSETS_DIR}"/>
+    </copy>
+    
   </target>
 
   <target
@@ -83,10 +81,106 @@
     <exec
       executable="${ADL}">
 
-      <arg value="${BIN_DIR}/${APP_DESCRIPTOR}"/>
+      <arg value="${BIN_DIR}/${DEBUG_DESCRIPTOR}"/>
 
     </exec>
 
+  </target>
+    
+  <!-- Makes and runs a desktop build -->
+  <target
+    name="release"
+	description="Makes an AIR file."
+	depends="releasec, package to air">
+
+  </target>
+	
+	
+  <target
+    name="releasec"
+    description="Compiles the release build">
+
+    <antcall
+      target="-amxmlc">
+
+      <param
+        name="DEBUG_BUILD"
+        value="false"/>
+
+    </antcall>
+
+    <copy
+      toFile="${BIN_DIR}/${RELEASE_DESCRIPTOR}"
+      file="${MANIFESTS_DIR}/${RELEASE_DESCRIPTOR}"/>
+      
+    <copy 
+      todir="${BIN_DIR}/assets">
+      <fileset dir="${ASSETS_DIR}"/>
+    </copy>
+  </target>
+    
+  <target
+    name="package to air">
+    
+    <echo
+      message="Packaging AIR application..."/>
+                
+      <java
+        jar="${ADT}"
+        fork="true"
+        failonerror="true">
+        
+        <arg value="-package"/>
+        <arg value="-storetype"/>
+        <arg value="${STORETYPE}"/>
+        <arg value="-keystore"/>
+        <arg value="${KEYSTORE}"/>
+        <arg value="-keypass"/>
+        <arg value="${STOREPASS}"/>
+        <arg value="-storepass"/>
+        <arg value="${STOREPASS}"/>
+        
+      	<!--<arg value="-target air"/>-->
+      	<arg value="${BIN_DIR}/${OUTPUT_AIR}"/>
+      	<arg value="${BIN_DIR}/${RELEASE_DESCRIPTOR}"/>
+      	<arg value="${BIN_DIR}/${OUTPUT_SWF}"/>
+      	
+      	<arg value="${BIN_DIR}/assets"/>
+      	
+      	<arg value="-C"/>
+      	<arg value="${SOURCE_FOLDER}"/>
+      	<arg value="assets"/>
+      	
+      </java>
+  </target>
+
+  <target 
+  	name="cert">
+  
+  	<echo
+  	  message="Generating signing certificate..."/>
+  	                
+  	  <java
+  	    jar="${ADT}"
+  	    fork="true"
+  	    failonerror="true">
+  	  
+  	  	<arg value="-certificate"/>
+  	  	<arg value="-cn"/>
+  	  	<arg value="SelfSign"/>
+  	  	<arg value="-ou"/>
+  	  	<arg value="${ORG_UNIT}"/>
+  	  	<arg value="-o"/>
+  	  	<arg value="${ORG}"/>
+  	  	<arg value="-c"/>
+  	  	<arg value="US"/>
+  	  	<arg value="2048-RSA"/>
+  	  	<arg value="${KEYSTORE}"/>
+  	  	<arg value="${STOREPASS}"/>
+  	  	
+  	  </java>
+  	
+  	
   </target>
 
 </project>

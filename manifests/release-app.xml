@@ -12,7 +12,7 @@
 	<initialWindow>
 		<!-- The main SWF or HTML file of the application. Required. -->
 		<!-- Note: In Flash Builder, the SWF reference is set automatically. -->
-		<content>Stripper.swf</content>
+		<content>bin/Stripper.swf</content>
 		<title>Stripper</title>
 		<systemChrome>standard</systemChrome>
 		<transparent>false</transparent>
@@ -27,10 +27,10 @@
 	</initialWindow>
 
 	<icon>
-		<image16x16>/assets/appIcons/app-icon-16.png</image16x16>
-		<image32x32>/assets/appIcons/app-icon-32.png</image32x32>
-		<image48x48>/assets/appIcons/app-icon-48.png</image48x48>
-		<image128x128>/assets/appIcons/app-icon-128.png</image128x128>
+		<image16x16>bin/assets/appIcons/app-icon-16.png</image16x16>
+		<image32x32>bin/assets/appIcons/app-icon-32.png</image32x32>
+		<image48x48>bin/assets/appIcons/app-icon-48.png</image48x48>
+		<image128x128>bin/assets/appIcons/app-icon-128.png</image128x128>
 	</icon>
 
 </application>
