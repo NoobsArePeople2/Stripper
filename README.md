@@ -11,6 +11,7 @@ Originally developed for use with [Flixel](https://github.com/AdamAtomic/flixel)
 # Dependencies
 
 * [Adobe Flex 3.6A SDK](http://opensource.adobe.com/wiki/display/flexsdk/Download+Flex+3)
+* [Adobe AIR SDK](http://www.adobe.com/special/products/air/sdk/)
 * [Apache Ant](http://ant.apache.org/)
 
 # How To Build for Debug

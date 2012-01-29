@@ -1,6 +1,50 @@
 # Location of Flex SDK
 SDK_HOME=C:\\Program Files\ (x86)\\Adobe\\Flex\ Builder\ 3\\sdks\\3.5.0
 
+# Location of the Flex SDK
+FLEX_HOME=E:/Dev/Flex/3.6.0
+
+# Flex binaries
+FLEX_BIN=${FLEX_HOME}/bin
+
+# AIR mxmlc
+AMXMLC=${FLEX_BIN}/amxmlc.bat
+
+# ADL
+ADL=${FLEX_BIN}/adl.exe
+
+# ADT
+ADT=${FLEX_HOME}/lib/adt.jar
+
+#--------------------------------#
+
+# Binaries folder
+BIN_DIR=bin
+
+# Location of application manifests
+MANIFESTS_DIR=src
+
+# Location of source files
+SOURCE_FOLDER=src
+
+# Project files
+MAIN_SOURCE_FILE=src/Stripper.mxml
+APP_DESCRIPTOR=Stripper-app.xml
+ASSETS_DIR=src/assets
+
+# Certificate
+STORETYPE=pkcs12
+KEYSTORE=cert/cert.p12
+STOREPASS=replace with your password
+
+# Compiled SWF
+OUTPUT_SWF=Stripper.swf
+
+# AIR package
+OUTPUT_AIR=Stripper.air
+
+######
+
 # Version
 VERSION=0.4.1
 
